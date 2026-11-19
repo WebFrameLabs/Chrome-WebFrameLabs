@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Chromer Feedback</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at center, #54111d 0%, #2b0810 55%, #0d0205 100%);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .feedback-card {
+            width: min(100%, 520px);
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 24px;
+            background: rgba(15, 23, 42, 0.78);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(18px);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(1.7rem, 6vw, 2.2rem);
+        }
+
+        .intro,
+        .privacy-note {
+            color: rgba(255, 255, 255, 0.72);
+            line-height: 1.55;
+        }
+
+        form {
+            display: grid;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        label {
+            display: grid;
+            gap: 7px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 11px 13px;
+            background: rgba(255, 255, 255, 0.07);
+            color: #fff;
+            font: inherit;
+        }
+
+        select option {
+            color: #111827;
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus,
+        button:focus-visible {
+            outline: 2px solid #38bdf8;
+            outline-offset: 3px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            background: #38bdf8;
+            color: #0f172a;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        #feedback-status {
+            min-height: 1.5em;
+            margin: 0;
+            font-size: 0.92rem;
+        }
+
+        #feedback-status[data-state="success"] {
+            color: #86efac;
+        }
+
+        #feedback-status[data-state="error"] {
+            color: #fca5a5;
+        }
+
+        .privacy-note {
+            margin: 8px 0 0;
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 14px;
+            }
+
+            .feedback-card {
+                padding: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="feedback-card">
+        <h1>💬 Send Feedback</h1>
+        <p class="intro">Have an idea, want to request an app, or spotted something that needs fixing? Send a note to the Chromer owner. App requests are reviewed by the owner and are not added automatically.</p>
+
+        <form id="feedback-form">
+            <label for="feedback-name">
+                Name <span aria-hidden="true">(optional)</span>
+                <input id="feedback-name" name="name" type="text" maxlength="80" autocomplete="name">
+            </label>
+
+            <label for="feedback-category">
+                Feedback type
+                <select id="feedback-category" name="category" required>
+                    <option value="idea">Idea</option>
+                    <option value="app_request">Request an app</option>
+                    <option value="bug">Something is broken</option>
+                    <option value="other">Other</option>
+                </select>
+            </label>
+
+            <label for="feedback-message">
+                Your feedback
+                <textarea id="feedback-message" name="message" maxlength="1000" required
+                    placeholder="Write your feedback. For app requests, include the app name."></textarea>
+            </label>
+
+            <button id="feedback-submit" type="submit">Send feedback</button>
+            <p id="feedback-status" role="status" aria-live="polite"></p>
+        </form>
+
+        <p class="privacy-note">Your message is sent to the site owner and is not shown publicly. Please don't include passwords or other sensitive information.</p>
+    </main>
+
+    <script>
+        const form = document.getElementById("feedback-form");
+        const submitButton = document.getElementById("feedback-submit");
+        const status = document.getElementById("feedback-status");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            submitButton.disabled = true;
+            status.dataset.state = "";
+            status.textContent = "Sending...";
+
+            try {
+                const response = await fetch("/api/feedback", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: form.elements.name.value,
+                        category: form.elements.category.value,
+                        message: form.elements.message.value
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || "Feedback could not be sent.");
+                }
+
+                form.reset();
+                status.dataset.state = "success";
+                status.textContent = result.message;
+            } catch (error) {
+                status.dataset.state = "error";
+                status.textContent = error.message || "Could not reach the feedback server. Please try again.";
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
